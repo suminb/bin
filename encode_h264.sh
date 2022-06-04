@@ -1,9 +1,10 @@
 #!/bin/sh
 
-file=$1
-base=$(basename "${file%.*}")
+source=$1
+base=$(basename "${source%.*}")
+target=${base}_H264.mp4
 ffmpeg \
-    -i $file \
+    -i $source \
     -c:v libx264 \
     -crf 23 \
     -preset fast \
@@ -11,4 +12,5 @@ ffmpeg \
     -b:a 128k \
     -map_metadata 0 \
     -tag:v hvc1 \
-    ${base}_H264.mp4
+    $target
+touch -m -r $source $target
