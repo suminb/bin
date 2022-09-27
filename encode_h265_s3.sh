@@ -1,7 +1,7 @@
 #!/bin/bash
 
 endpoint="http://hyperion.shortbread.io:8000"
-source=$1
+source="$1"
 basename=$(basename "${source%.*}")
 dirname=$(dirname "$source")
 target=${dirname}/${basename}_H265.mp4
