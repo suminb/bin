@@ -10,6 +10,10 @@ presign() {
 duration() {
     source="$1"
     ffprobe -show_entries format=duration -v quiet -of csv="p=0" "$source"
+    if [[ $? != 0 ]]; then
+        >&2 echo "Could not get video duration for $source"
+        return -1
+    fi
 }
 
 verify() {
@@ -19,10 +23,28 @@ verify() {
 
     echo "Getting video duration for $path1"
     duration1=$(duration "$path1")
+    if [[ $? != 0 ]]; then
+        return $?
+    fi
+
     echo "Getting video duration for $path2"
     duration2=$(duration "$path2")
+    if [[ $? != 0 ]]; then
+        return $?
+    fi
 
     echo "$duration1, $duration2"
+
+    python_code="print(abs($duration1 - $duration2) < 0.1)"
+    val=$(python -c "$python_code")
+
+    if [[ $val == "True" ]]; then
+        echo "Validated"
+        return 0
+    else
+        echo "Something went sideways"
+        return -1
+    fi
 }
 
 h265() {
@@ -47,6 +69,12 @@ h265() {
         "$target"
 }
 
+exists_on_s3() {
+    url=$1
+    aws --endpoint=$endpoint s3 ls "$url" > /dev/null
+    echo "$?"
+}
+
 s3comp() {
     source="$1" # expects and S3 URL
     presigned_source=$(presign "$source")
@@ -56,14 +84,21 @@ s3comp() {
     presigned_target=$(presign "$target")
 
     if [[ "$source" = *_H265.mp4 || "$source" = *_Original.mp4 ]]; then
-        echo "${source} is already processed. Aborted."
-        return false
+        echo "${source} is already processed"
+    elif [[ $(exists_on_s3 "$target") == 0 ]]; then
+        echo "${target} already exists"
+    else
+        echo "Encode $source on S3, verify, and delete the original when completed"
+        h265 "$presigned_source" "pipe:1" | aws --endpoint-url=$endpoint s3 cp - "$target"
     fi
 
-    echo "Encode $source on S3, verify, and delete the original when completed"
-    h265 "$presigned_source" "pipe:1" | aws --endpoint-url=$endpoint s3 cp - "$target"
-
-    verify $presigned_source $presigned_target
+    if [[ $(exists_on_s3 "$source") == 0 && $(exists_on_s3 "$target") == 0 ]]; then
+        verify "$presigned_source" "$presigned_target"
+        if [[ $? == 0 ]]; then
+            echo "Remove original file"
+            aws --endpoint=$endpoint s3 rm $source
+        fi
+    fi
 }
 
 case $subcommand in
