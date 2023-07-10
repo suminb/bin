@@ -142,7 +142,7 @@ case $subcommand in
         presign $2
         ;;
     "h265")
-        echo "Not implemented"
+        h265 ${@:2}
         ;;
     "duration")
         duration ${@:2}
