@@ -47,6 +47,36 @@ verify() {
     fi
 }
 
+h264() {
+    source="$1"
+    target="$2"
+    vertical_size=$3
+    # https://trac.ffmpeg.org/wiki/Encode/H.265
+    # NOTE: -tag:v hvc1 makes possible to import the file into Final Cut Pro
+
+    if [[ ! -z "$vertical_size" ]]; then
+        scale_option="-vf scale=-1:$vertical_size"
+    else
+        scale_option=""
+    fi
+
+    ffmpeg \
+        -i "$source" \
+        -c:v h264_videotoolbox \
+        -q:v 55 \
+        -preset fast \
+        $scale_option \
+        -g 60 \
+        -preset fast \
+        -c:a aac \
+        -b:a 128k \
+        -map_metadata 0 \
+        -movflags frag_keyframe+empty_moov \
+        -f mp4 \
+        -y \
+        "$target"
+}
+
 h265() {
     source="$1"
     target="$2"
@@ -140,6 +170,9 @@ s3comp() {
 case $subcommand in
     "presign")
         presign $2
+        ;;
+    "h264")
+        h264 ${@:2}
         ;;
     "h265")
         h265 ${@:2}
