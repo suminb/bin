@@ -5,6 +5,7 @@ rear).
 from datetime import datetime
 import glob
 import os
+import shutil
 import subprocess
 import sys
 
@@ -37,6 +38,7 @@ def consolidate_by_date_and_direction(paths: List[str]) -> dict:
     return consolidated
 
 
+# TODO: Calculate the actual time difference
 def is_consecutive(prev_min, curr_min):
     return 0 <= (curr_min - prev_min) <= 2 or prev_min + 1 == curr_min + 60
 
@@ -96,10 +98,11 @@ if __name__ == "__main__":
     # no split for parking footages
     # base_path = "/Volumes/archive/Others/inavi/Driving"
     base_path = sys.argv[1]
+    trash_path = sys.argv[2] # temporary
     consolidated = consolidate_by_date_and_direction(
         glob.glob(os.path.join(base_path, "*.MP4"))
     )
-    split_non_consecutive = True
+    split_non_consecutive = bool(int(sys.argv[3]))
 
     if split_non_consecutive:
         consolidated = split_non_consecutive_filenames(consolidated)
@@ -118,8 +121,13 @@ if __name__ == "__main__":
             continue
 
         command = (
-            f"ffmpeg -f concat -safe -0 -i {concat_filename} -c copy {output_filename}"
+            f'ffmpeg -f concat -safe -0 -i "{concat_filename}" -c copy "{output_filename}"'
         )
         exit_code = os.system(command)
         if exit_code:
             raise RuntimeError(f"Failed with {exit_code}: {command}")
+        # TODO: Adjust creation and modification dates https://improveandrepeat.com/2022/04/python-friday-120-modify-the-create-date-of-a-file/
+
+        for path in value:
+            print(f"Deleting {path}...")
+            shutil.move(path, trash_path)
