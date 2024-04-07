@@ -98,7 +98,7 @@ if __name__ == "__main__":
     # no split for parking footages
     # base_path = "/Volumes/archive/Others/inavi/Driving"
     base_path = sys.argv[1]
-    trash_path = sys.argv[2] # temporary
+    target_path = sys.argv[2]
     consolidated = consolidate_by_date_and_direction(
         glob.glob(os.path.join(base_path, "*.MP4"))
     )
@@ -115,7 +115,7 @@ if __name__ == "__main__":
         concat_filename = f"/tmp/concat_{date}_{direction}_{sequence}.txt"
         generate_concat_file(value, concat_filename)
 
-        output_filename = os.path.join(base_path, f"{date}_{direction}_{sequence}.mp4")
+        output_filename = os.path.join(target_path, f"{date}_{direction}_{sequence}.mp4")
         if os.path.exists(output_filename):
             print(f"{output_filename} already exists. Skipping...")
             continue
@@ -127,7 +127,3 @@ if __name__ == "__main__":
         if exit_code:
             raise RuntimeError(f"Failed with {exit_code}: {command}")
         # TODO: Adjust creation and modification dates https://improveandrepeat.com/2022/04/python-friday-120-modify-the-create-date-of-a-file/
-
-        for path in value:
-            print(f"Deleting {path}...")
-            shutil.move(path, trash_path)
