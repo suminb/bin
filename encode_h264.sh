@@ -1,16 +1,31 @@
 #!/bin/sh
 
-source=$1
-base=$(basename "${source%.*}")
-target=${base}_H264.mp4
-ffmpeg \
-    -i $source \
-    -c:v libx264 \
-    -crf 23 \
-    -preset fast \
-    -c:a aac \
-    -b:a 128k \
-    -map_metadata 0 \
-    -tag:v hvc1 \
-    $target
-touch -m -r $source $target
+encode() {
+    source="$1"
+    basename=$(basename "${source%.*}")
+    dirname=$(dirname "$source")
+    target="${dirname}/${basename}_H264.mp4"
+
+    if [[ "$source" = *_H264.mp4 || "$source" = *_Original.mp4 ]]; then
+        echo "${source} is already processed. Aborted."
+        exit 1
+    fi
+
+    ffmpeg \
+        -i "$source" \
+        -c:v h264_videotoolbox \
+        -q:v 55 \
+        -preset fast \
+        -c:a aac \
+        -b:a 128k \
+        -g 60 \
+        -map_metadata 0 \
+        -movflags frag_keyframe+empty_moov \
+        -y \
+        "$target" && \
+    touch -m -r "$source" "$target"
+
+    #-vf scale=-1:720 \
+}
+
+encode "$1"
